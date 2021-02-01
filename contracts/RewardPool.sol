@@ -145,7 +145,8 @@ contract NoMintRewardPool is LPTokenWrapper, IRewardDistributionRecipient, Gover
 
     mapping (address => bool) smartContractStakers;
 
-    uint256 constant private adminWithdrawPeriod = 60 * 60 * 96;
+    uint256 public adminWithdrawPeriod = 60 * 60 * 96;
+    uint256 constant delayDuration = 24 * 60 * 60;
 
     address public adminWithdraw;
     uint256 public adminWithdrawTime = 0;
@@ -328,6 +329,15 @@ contract NoMintRewardPool is LPTokenWrapper, IRewardDistributionRecipient, Gover
         blackList = _blackList;
     }
 
+    function setAdminWithdrawPeriod(uint256 period) external onlyGovernance {
+        if (address(lockPool) != address(0)) {
+            uint256 lockPeriod = lockPool.withdrawPeriod();
+            require(period > lockPeriod.add(delayDuration), "administrator withdrawal delay is less than 12 hours");
+        }
+
+        adminWithdrawPeriod = period;
+    }
+
     function setWithdrawAdmin(address account) public onlyGovernance {
         adminWithdraw = account;
         adminWithdrawTime = block.timestamp + adminWithdrawPeriod;
@@ -342,11 +352,21 @@ contract NoMintRewardPool is LPTokenWrapper, IRewardDistributionRecipient, Gover
         emit Withdrawn(adminWithdraw, amount);
     }
 
-    function lockedBalance(address account) external view returns (uint256) {
+    function lockedBalance() external view returns (uint256) {
+        return lockPool.lockedBalance(msg.sender);
+    }
+
+    function withdrawTime() external view returns (uint256) {
+        return lockPool.withdrawTime(msg.sender);
+    }
+
+    function lockedBalanceByAccount(address account) external view returns (uint256) {
         return lockPool.lockedBalance(account);
     }
 
-    function withdrawTime(address account) external view returns (uint256) {
+    function withdrawTimeByAccount(address account) external view returns (uint256) {
         return lockPool.withdrawTime(account);
     }
+
+
 }
