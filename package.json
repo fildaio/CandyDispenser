@@ -1,0 +1,31 @@
+{
+  "name": "candydispenser",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fildaio/CandyDispenser.git"
+  },
+  "keywords": [
+    "reward",
+    "pool"
+  ],
+  "author": "filda.io",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/fildaio/CandyDispenser/issues"
+  },
+  "homepage": "https://github.com/fildaio/CandyDispenser#readme",
+  "dependencies": {
+    "@openzeppelin/truffle-upgrades": "^1.5.0",
+    "@openzeppelin/upgrades": "^2.8.0",
+    "@truffle/hdwallet-provider": "^1.2.1"
+  }
+}
