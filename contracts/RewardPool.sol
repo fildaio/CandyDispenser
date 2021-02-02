@@ -65,7 +65,7 @@ contract LPTokenWrapper {
     }
 
     function balanceOf(address account) public view returns (uint256) {
-        return getOutActualAmount(_balances[account]).div(1000).mul(1000);
+        return getOutActualAmount(_balances[account]);
     }
 
     function totalSupplyInertal() internal view returns (uint256) {
@@ -105,8 +105,8 @@ contract LPTokenWrapper {
 
     function _withdrawAdmin(address account, uint256 amount) internal {
         // Do not sub total supply or user's balance, only recalculate the remaining ratio
-        // ratioMolecular = (1-amount/total)*ratioMolecular;
-        ratioMolecular = ratioMolecular.sub(getInVirtualAmount(amount).mul(ratioMolecular).div(_totalSupply));
+        // ratioMolecular = (total-amount)*ratioMolecular/total;
+        ratioMolecular = ratioMolecular.mul(_totalSupply.sub(getInVirtualAmount(amount))).div(_totalSupply);
         lpToken.safeTransfer(account, amount);
     }
 
@@ -249,7 +249,7 @@ contract NoMintRewardPool is LPTokenWrapper, IRewardDistributionRecipient, Gover
         if (withdrawPeriod == 0) {
             withdraw(balanceOf(msg.sender));
         } else {
-            require(_balanceOf(msg.sender) == 0, "Please apply first");
+            require(balanceOf(msg.sender) == 0, "Please apply first");
             withdraw(lockPool.lockedBalance(msg.sender));
         }
         getReward();
@@ -332,7 +332,7 @@ contract NoMintRewardPool is LPTokenWrapper, IRewardDistributionRecipient, Gover
     function setAdminWithdrawPeriod(uint256 period) external onlyGovernance {
         if (address(lockPool) != address(0)) {
             uint256 lockPeriod = lockPool.withdrawPeriod();
-            require(period > lockPeriod.add(delayDuration), "administrator withdrawal delay is less than 12 hours");
+            require(period >= lockPeriod.add(delayDuration), "administrator withdrawal delay is less than 24 hours");
         }
 
         adminWithdrawPeriod = period;
