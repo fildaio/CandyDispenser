@@ -337,11 +337,7 @@ contract NoMintRewardPool is LPTokenSnapshot, IRewardDistributionRecipient, Gove
         blackList = _blackList;
         setWithdrawAdmin(_adminWithdraw);
 
-        withdrawPeriod = _withdrawPeriod;
-        if (_withdrawPeriod != 0) {
-            require(_lockPool != address(0), "Please set lock pool contract");
-            lockPool = LockPool(_lockPool);
-        }
+        _setLockPool(_lockPool, _withdrawPeriod);
     }
 
     function lastTimeRewardApplicable() public view returns (uint256) {
@@ -525,5 +521,17 @@ contract NoMintRewardPool is LPTokenSnapshot, IRewardDistributionRecipient, Gove
 
     function setSnapshotCaller(address caller) external onlyGovernance {
         snapshotCaller = caller;
+    }
+
+    function _setLockPool(address _lockPool, uint256 _withdrawPeriod) private {
+        withdrawPeriod = _withdrawPeriod;
+        if (_withdrawPeriod != 0) {
+            require(_lockPool != address(0), "Please set lock pool contract");
+            lockPool = LockPool(_lockPool);
+        }
+    }
+
+    function setLockPool(address _lockPool, uint256 _withdrawPeriod) external onlyGovernance {
+        _setLockPool(_lockPool, _withdrawPeriod);
     }
 }

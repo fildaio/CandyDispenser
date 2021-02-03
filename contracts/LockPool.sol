@@ -39,6 +39,14 @@ contract LockPool is Ownable {
     }
 
     function withdraw(address account, uint256 amount) external onlyRewardPool {
+        _withdraw(account, amount);
+    }
+
+    function withdrawBySender(uint256 amount) public {
+        _withdraw(msg.sender, amount);
+    }
+
+    function _withdraw(address account, uint256 amount) private {
         require(withdrawEntities[account].amount > 0 && withdrawEntities[account].time > 0, "not applied!");
         require(block.timestamp >= withdrawTime(account), "It's not time to withdraw");
         if (amount > withdrawEntities[account].amount) {
