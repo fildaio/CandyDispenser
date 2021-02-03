@@ -291,6 +291,8 @@ contract NoMintRewardPool is LPTokenSnapshot, IRewardDistributionRecipient, Gove
 
     uint256 public withdrawPeriod;
 
+    address public snapshotCaller;
+
     event RewardAdded(uint256 reward);
     event Staked(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
@@ -306,6 +308,11 @@ contract NoMintRewardPool is LPTokenSnapshot, IRewardDistributionRecipient, Gove
             rewards[account] = earned(account);
             userRewardPerTokenPaid[account] = rewardPerTokenStored;
         }
+        _;
+    }
+
+    modifier onlyCallerOrGovernance() {
+        require(isGovernance(msg.sender) || (snapshotCaller != address(0) && msg.sender == snapshotCaller), "Not governance or caller");
         _;
     }
 
@@ -451,7 +458,6 @@ contract NoMintRewardPool is LPTokenSnapshot, IRewardDistributionRecipient, Gove
 
         if (block.timestamp >= periodFinish) {
             rewardRate = reward.div(duration);
-            _snapshot();
         } else {
             uint256 remaining = periodFinish.sub(block.timestamp);
             uint256 leftover = remaining.mul(rewardRate);
@@ -513,5 +519,11 @@ contract NoMintRewardPool is LPTokenSnapshot, IRewardDistributionRecipient, Gove
         return lockPool.withdrawTime(account);
     }
 
+    function snapshot() external onlyCallerOrGovernance returns (uint256) {
+        return _snapshot();
+    }
 
+    function setSnapshotCaller(address caller) external onlyGovernance {
+        snapshotCaller = caller;
+    }
 }
