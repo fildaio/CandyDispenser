@@ -507,14 +507,6 @@ contract NoMintRewardPool is LPTokenSnapshot, IRewardDistributionRecipient, Gove
         return lockPool.withdrawTime(msg.sender);
     }
 
-    function lockedBalanceByAccount(address account) external view returns (uint256) {
-        return lockPool.lockedBalance(account);
-    }
-
-    function withdrawTimeByAccount(address account) external view returns (uint256) {
-        return lockPool.withdrawTime(account);
-    }
-
     function snapshot() external onlyCallerOrGovernance returns (uint256) {
         return _snapshot();
     }

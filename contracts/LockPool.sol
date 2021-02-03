@@ -53,15 +53,18 @@ contract LockPool is Ownable {
             amount = withdrawEntities[account].amount;
         }
         withdrawEntities[account].amount = withdrawEntities[account].amount.sub(amount);
-        withdrawEntities[account].time = 0;
+        if (withdrawEntities[account].amount == 0) {
+            withdrawEntities[account].time = 0;
+        }
+
         lpToken.safeTransfer(account, amount);
     }
 
-    function lockedBalance(address account) external view onlyRewardPool returns (uint256) {
+    function lockedBalance(address account) external view returns (uint256) {
         return withdrawEntities[account].amount;
     }
 
-    function withdrawTime(address account) public view onlyRewardPool returns (uint256) {
+    function withdrawTime(address account) public view returns (uint256) {
         return withdrawEntities[account].time + withdrawPeriod;
     }
 
