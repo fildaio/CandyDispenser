@@ -381,6 +381,7 @@ contract AirDropPool is Governable {
 
     function earned(address account) public view returns (uint256) {
         if (msg.sender != tx.origin) return 0;
+        if (rewardToken.balanceOf(address(this) < rewardRate)) return rewardToken.balanceOf(address(this));
         if (!whitelist.exist(account)) return 0;
         if (rewards[account] == 0) return rewardRate;
         return 0;
