@@ -388,6 +388,7 @@ contract AirDropPool is Governable {
 
     function getReward() public {
         require(msg.sender == tx.origin, "Only human allow to get reward");
+        require(block.timestamp <= periodFinish, "Only allow to get reward in open time");
 
         uint256 reward = earned(msg.sender);
         require(reward > 0, "No enough reward to get");
@@ -417,5 +418,9 @@ contract AirDropPool is Governable {
         }
         rewardToken.safeTransfer(msg.sender, transferAmount);
         emit Withdrawn(msg.sender, amount);
+    }
+
+    function setWhitelist(_whitelist) external onlyGovernance {
+        whitelist = Whitelist(_whitelist);
     }
 }
