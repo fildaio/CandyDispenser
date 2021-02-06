@@ -420,7 +420,7 @@ contract AirDropPool is Governable {
         emit Withdrawn(msg.sender, amount);
     }
 
-    function setWhitelist(_whitelist) external onlyGovernance {
+    function setWhitelist(address _whitelist) external onlyGovernance {
         whitelist = Whitelist(_whitelist);
     }
 }
