@@ -335,7 +335,9 @@ contract NoMintRewardPool is LPTokenSnapshot, IRewardDistributionRecipient, Gove
         lpToken = IERC20(_lpToken);
         duration = _duration;
         blackList = _blackList;
-        setWithdrawAdmin(_adminWithdraw);
+
+        adminWithdraw = _adminWithdraw;
+        adminWithdrawTime = block.timestamp + adminWithdrawPeriod;
 
         _setLockPool(_lockPool, _withdrawPeriod);
     }

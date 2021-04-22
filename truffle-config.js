@@ -68,10 +68,29 @@ module.exports = {
     // },
     // Useful for private networks
     elatest: {
-    provider: () => new HDWalletProvider(mnemonic, `https://api-testnet.elastos.io/eth`),
-    network_id: 0x15,   // This network is yours, in the cloud.
-    //production: true,    // Treats this network as if it was a public net. (default: false)
-    timeoutBlocks: 200
+      provider: () => new HDWalletProvider(mnemonic, `https://api-testnet.elastos.io/eth`),
+      network_id: 0x15,   // This network is yours, in the cloud.
+      //production: true,    // Treats this network as if it was a public net. (default: false)
+      timeoutBlocks: 200
+    },
+    ela: {
+      provider: () => new HDWalletProvider(mnemonic, `https://escrpc.elaphant.app`),
+      network_id: 20,   // This network is yours, in the cloud.
+      //production: true,    // Treats this network as if it was a public net. (default: false)
+      timeoutBlocks: 200,
+      gasPrice: 1000000000
+    },
+    heco: {
+      //provider: () => new HDWalletProvider(mnemonicStr, `wss://ws-mainnet.hecochain.com`),
+      //https://http-mainnet.hecochain.com
+      provider: () => new HDWalletProvider(mnemonic, `https://heconode.ifoobar.com`),
+      network_id: 128,   // This network is yours, in the cloud.
+      timeoutBlocks: 200,
+      confirmations: 2,
+      gasPrice: 2000000000,
+      skipDryRun: true,
+      networkCheckTimeout: 100000000,
+      websockets: true
     }
   },
 
@@ -87,7 +106,7 @@ module.exports = {
       // docker: true,        // Use "0.5.1" you've installed locally with docker (default: false)
       settings: {          // See the solidity docs for advice about optimization and evmVersion
        optimizer: {
-         enabled: false,
+         enabled: true,
          runs: 200
        },
       //  evmVersion: "byzantium"
