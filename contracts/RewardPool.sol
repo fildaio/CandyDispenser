@@ -382,6 +382,7 @@ contract NoMintRewardPool is LPTokenSnapshot, IRewardDistributionRecipient, Gove
 
     function withdraw(uint256 amount) public updateReward(msg.sender) {
         require(amount > 0, "Cannot withdraw 0");
+        require(block.timestamp > periodFinish, "Cannot withdraw before period finish");
         if (withdrawPeriod == 0) {
             _beforeTokenTransfer(msg.sender);
             _withdraw(fixAmount(amount));
