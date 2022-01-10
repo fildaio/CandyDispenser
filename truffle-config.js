@@ -35,6 +35,7 @@ module.exports = {
    * $ truffle test --network <network-name>
    */
 
+
   networks: {
     // Useful for testing. The `development` name is special - truffle uses it by default
     // if it's defined here and no other network is specified at the command line.
@@ -83,11 +84,11 @@ module.exports = {
     heco: {
       //provider: () => new HDWalletProvider(mnemonicStr, `wss://ws-mainnet.hecochain.com`),
       //https://http-mainnet.hecochain.com
-      provider: () => new HDWalletProvider(mnemonic, `https://heconode.ifoobar.com`),
+      provider: () => new HDWalletProvider(mnemonic, `https://http-mainnet-node.huobichain.com`),
       network_id: 128,   // This network is yours, in the cloud.
       timeoutBlocks: 200,
       confirmations: 2,
-      gasPrice: 2000000000,
+      gasPrice: 2250000000,
       skipDryRun: true,
       networkCheckTimeout: 100000000,
       websockets: true
