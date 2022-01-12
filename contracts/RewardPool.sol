@@ -532,4 +532,12 @@ contract NoMintRewardPool is LPTokenSnapshot, IRewardDistributionRecipient, Gove
     function setLockPool(address _lockPool, uint256 _withdrawPeriod) external onlyGovernance {
         _setLockPool(_lockPool, _withdrawPeriod);
     }
+
+    function pullRewardToken(uint256 amount) external onlyGovernance {
+        if (amount > rewardToken.balanceOf(address(this))) {
+            amount = rewardToken.balanceOf(address(this));
+        }
+
+        rewardToken.safeTransfer(governance, amount);
+    }
 }

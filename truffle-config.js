@@ -82,9 +82,7 @@ module.exports = {
       gasPrice: 1000000000
     },
     heco: {
-      //provider: () => new HDWalletProvider(mnemonicStr, `wss://ws-mainnet.hecochain.com`),
-      //https://http-mainnet.hecochain.com
-      provider: () => new HDWalletProvider(mnemonic, `https://http-mainnet-node.huobichain.com`),
+      provider: () => new HDWalletProvider(mnemonic, `wss://ws-mainnet.hecochain.com`),
       network_id: 128,   // This network is yours, in the cloud.
       timeoutBlocks: 200,
       confirmations: 2,
