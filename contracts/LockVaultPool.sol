@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/lifecycle/Pausable.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20Burnable.sol";
 
 contract LockVaultPool is Ownable, Pausable, ERC20 {
     using SafeMath for uint256;
@@ -36,6 +37,11 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
     bool private inExe = false;
     address private exeAccount = address(0);
 
+    uint256 public feeMolecular = 2000;
+    uint256 private constant FEE_DENOMINATOR = 10000;
+
+    event WithdrawPeriodChanged(uint256 indexed _withdrawPeriod);
+    event FeeChanged(uint256 indexed _fee);
     event ContractAllowed(bool _allowed);
     event Deposited(address from, address to, uint256 amount);
     event Withdrawn(address from, address to, uint256 amount);
@@ -81,6 +87,12 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
 
     function setWithdrawPeriod(uint256 _withdrawPeriod) external onlyOwner {
         withdrawPeriod = _withdrawPeriod;
+        emit WithdrawPeriodChanged(_withdrawPeriod);
+    }
+
+    function setFee(uint256 _fee) external onlyOwner {
+        feeMolecular = _fee;
+        emit FeeChanged(_fee);
     }
 
     function lock(address account, uint256 amount) external onlyRewardPool {
@@ -105,7 +117,6 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
 
     function _withdraw(address account, uint256 amount) private {
         require(withdrawEntities[account].amount > 0 && withdrawEntities[account].time > 0, "not applied!");
-        require(block.timestamp >= withdrawTime(account), "It's not time to withdraw");
         if (amount > withdrawEntities[account].amount) {
             amount = withdrawEntities[account].amount;
         }
@@ -115,7 +126,13 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
         }
 
         totalLocked = totalLocked.sub(amount);
-        lpToken.safeTransfer(account, amount);
+        if (block.timestamp >= withdrawTime(account)) {
+            lpToken.safeTransfer(account, amount);
+        } else {
+            uint256 fee = amount.mul(feeMolecular).div(FEE_DENOMINATOR);
+            ERC20Burnable(address(lpToken)).burn(fee);
+            lpToken.safeTransfer(account, amount.sub(fee));
+        }
     }
 
     function lockedBalance(address account) external view returns (uint256) {
