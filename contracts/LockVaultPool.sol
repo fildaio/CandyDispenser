@@ -177,6 +177,25 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
         emit Deposited(msg.sender, to, amount);
     }
 
+    function cancelLock(uint256 amount, address to) external whenNotPaused checkContract {
+        require(withdrawEntities[msg.sender].amount > 0 && withdrawEntities[msg.sender].time > 0, "not applied!");
+        require(withdrawEntities[msg.sender].amount >= amount, "applied amount is not enough!");
+
+        reinvest();
+        uint256 exchangeRate = exchangeRateStored();
+        withdrawEntities[msg.sender].amount = withdrawEntities[msg.sender].amount.sub(amount);
+        if (withdrawEntities[msg.sender].amount == 0) {
+            withdrawEntities[msg.sender].time = 0;
+        }
+
+        totalLocked = totalLocked.sub(amount);
+
+        rewardPool.stake(amount);
+        uint256 mintAmount = amount.mul(EXP_SCALE).div(exchangeRate);
+        _mint(to, mintAmount);
+        emit Deposited(msg.sender, to, amount);
+    }
+
     function vaultWithdraw(uint256 amount, address to) external checkContract {
         reinvest();
 
