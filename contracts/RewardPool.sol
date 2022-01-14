@@ -1,10 +1,12 @@
 
 import "./BlackList.sol";
-import "./LockPool.sol";
+import "./LockVaultPool.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Arrays.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/drafts/Counters.sol";
+import "@openzeppelin/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 
 // File: contracts/IRewardDistributionRecipient.sol
@@ -62,7 +64,7 @@ contract LPTokenWrapper {
     uint256 constant private ratioDenominator = 1e18;
     uint256 private ratioMolecular = 1e18;
 
-    LockPool public lockPool;
+    LockVaultPool public lockPool;
 
     function totalSupply() public view returns (uint256) {
         return getOutActualAmount(_totalSupply);
@@ -525,7 +527,7 @@ contract NoMintRewardPool is LPTokenSnapshot, IRewardDistributionRecipient, Gove
         withdrawPeriod = _withdrawPeriod;
         if (_withdrawPeriod != 0) {
             require(_lockPool != address(0), "Please set lock pool contract");
-            lockPool = LockPool(_lockPool);
+            lockPool = LockVaultPool(_lockPool);
         }
     }
 

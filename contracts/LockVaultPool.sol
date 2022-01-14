@@ -1,12 +1,13 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.5.0;
 
-import "./BoringOwnable.sol";
 import "./RewardPool.sol";
-import "@openzeppelin/contracts/lifecycle/Pausable.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/lifecycle/Pausable.sol";
+import "@openzeppelin/contracts/ownership/Ownable.sol";
 
-contract FiLDAVault is BoringOwnable, Pausable, ERC20 {
+contract LockVaultPool is Ownable, Pausable, ERC20 {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -16,17 +17,33 @@ contract FiLDAVault is BoringOwnable, Pausable, ERC20 {
 
     uint256 private _initialExchangeRate;
 
-    IERC20 public underlying;
-
+    IERC20 public lpToken;
+    uint256 public withdrawPeriod = 72 hours;
     NoMintRewardPool public rewardPool;
+
+    struct WithDrawEntity {
+        uint256 amount;
+        uint256 time;
+    }
+
+    mapping (address => WithDrawEntity) private withdrawEntities;
+    uint256 public totalLocked;
 
     bool public contractAllowed = true;
 
     uint constant EXP_SCALE = 1e18;
 
+    bool private inExe = false;
+    address private exeAccount = address(0);
+
     event ContractAllowed(bool _allowed);
     event Deposited(address from, address to, uint256 amount);
     event Withdrawn(address from, address to, uint256 amount);
+
+    modifier onlyRewardPool() {
+        require(msg.sender == address(rewardPool), "Not reward pool");
+        _;
+    }
 
     modifier checkContract() {
         if (!contractAllowed)  {
@@ -42,11 +59,71 @@ contract FiLDAVault is BoringOwnable, Pausable, ERC20 {
         _decimals = 18;
         _initialExchangeRate = initialExchangeRate_;
 
-        rewardPool = NoMintRewardPool(rewardPool_);
-        require(rewardPool.rewardToken() == rewardPool.lpToken(), "reward pool rewardToken is not equal to lpToken");
-        underlying = rewardPool.rewardToken();
+        if (rewardPool_ != address(0)) {
+            rewardPool = NoMintRewardPool(rewardPool_);
+            require(rewardPool.rewardToken() == rewardPool.lpToken(), "reward pool rewardToken is not equal to lpToken");
+            lpToken = rewardPool.rewardToken();
 
-        underlying.safeApprove(rewardPool_, uint(-1));
+            lpToken.safeApprove(rewardPool_, uint(-1));
+        }
+
+    }
+
+    function setRewardPool(address _pool) external onlyOwner {
+        require(_pool != address(0), "reward pool shouldn't be empty");
+
+        rewardPool = NoMintRewardPool(_pool);
+        require(rewardPool.rewardToken() == rewardPool.lpToken(), "reward pool rewardToken is not equal to lpToken");
+        lpToken = rewardPool.rewardToken();
+
+        lpToken.safeApprove(_pool, uint(-1));
+    }
+
+    function setWithdrawPeriod(uint256 _withdrawPeriod) external onlyOwner {
+        withdrawPeriod = _withdrawPeriod;
+    }
+
+    function lock(address account, uint256 amount) external onlyRewardPool {
+        if (inExe && exeAccount != address(0)) {
+            withdrawEntities[exeAccount].amount = withdrawEntities[exeAccount].amount.add(amount);
+            withdrawEntities[exeAccount].time = block.timestamp;
+        } else {
+            withdrawEntities[account].amount = withdrawEntities[account].amount.add(amount);
+            withdrawEntities[account].time = block.timestamp;
+        }
+        lpToken.safeTransferFrom(msg.sender, address(this), amount);
+        totalLocked = totalLocked.add(amount);
+    }
+
+    function withdraw(address account, uint256 amount) external onlyRewardPool {
+        _withdraw(account, amount);
+    }
+
+    function withdrawBySender(uint256 amount) public {
+        _withdraw(msg.sender, amount);
+    }
+
+    function _withdraw(address account, uint256 amount) private {
+        require(withdrawEntities[account].amount > 0 && withdrawEntities[account].time > 0, "not applied!");
+        require(block.timestamp >= withdrawTime(account), "It's not time to withdraw");
+        if (amount > withdrawEntities[account].amount) {
+            amount = withdrawEntities[account].amount;
+        }
+        withdrawEntities[account].amount = withdrawEntities[account].amount.sub(amount);
+        if (withdrawEntities[account].amount == 0) {
+            withdrawEntities[account].time = 0;
+        }
+
+        totalLocked = totalLocked.sub(amount);
+        lpToken.safeTransfer(account, amount);
+    }
+
+    function lockedBalance(address account) external view returns (uint256) {
+        return withdrawEntities[account].amount;
+    }
+
+    function withdrawTime(address account) public view returns (uint256) {
+        return withdrawEntities[account].time + withdrawPeriod;
     }
 
     /**
@@ -90,7 +167,7 @@ contract FiLDAVault is BoringOwnable, Pausable, ERC20 {
         reinvest();
         uint256 exchangeRate = exchangeRateStored();
 
-        underlying.safeTransferFrom(msg.sender, address(this), amount);
+        lpToken.safeTransferFrom(msg.sender, address(this), amount);
         require(avilable() >= amount, "transfer in amount error");
 
         rewardPool.stake(avilable());
@@ -100,43 +177,54 @@ contract FiLDAVault is BoringOwnable, Pausable, ERC20 {
         emit Deposited(msg.sender, to, amount);
     }
 
-    function withdraw(uint256 amount, address to) external checkContract {
-        rewardPool.getReward();
+    function vaultWithdraw(uint256 amount, address to) external checkContract {
+        reinvest();
 
         uint exchangeRate = exchangeRateStored();
 
         _burn(msg.sender, amount);
         uint256 underlyingAmount = exchangeRate.mul(amount).div(EXP_SCALE);
-        if (avilable() < underlyingAmount) {
-            rewardPool.withdraw(underlyingAmount.sub(avilable()));
-        } else if (avilable() > underlyingAmount) {
-            rewardPool.stake(avilable().sub(underlyingAmount));
-        }
+        if (withdrawPeriod == 0) {
+            rewardPool.withdraw(underlyingAmount);
+            lpToken.safeTransfer(to, underlyingAmount);
+            emit Withdrawn(msg.sender, to, underlyingAmount);
+        } else {
+            inExe = true;
+            exeAccount = to;
 
-        underlying.safeTransfer(to, underlyingAmount);
-        emit Withdrawn(msg.sender, to, underlyingAmount);
+            rewardPool.withdrawApplication(underlyingAmount);
+
+            inExe = false;
+            exeAccount = address(0);
+        }
     }
 
-    function withdrawUnderlying(uint256 amount, address to) external checkContract {
-        rewardPool.getReward();
+    function vaultWithdrawUnderlying(uint256 amount, address to) external checkContract {
+        reinvest();
 
         uint256 tokenAmount = amount.mul(EXP_SCALE).div(exchangeRateStored());
         _burn(msg.sender, tokenAmount);
 
-        if (avilable() < amount) {
-            rewardPool.withdraw(amount.sub(avilable()));
-        } else if (avilable() > amount) {
-            rewardPool.stake(avilable().sub(amount));
-        }
+        if (withdrawPeriod == 0) {
+            rewardPool.withdraw(amount);
+            lpToken.safeTransfer(to, amount);
+            emit Withdrawn(msg.sender, to, amount);
+        } else {
+            inExe = true;
+            exeAccount = to;
 
-        underlying.safeTransfer(to, amount);
-        emit Withdrawn(msg.sender, to, amount);
+            rewardPool.withdrawApplication(amount);
+
+            inExe = false;
+            exeAccount = address(0);
+        }
     }
 
     function reinvest() public checkContract {
         rewardPool.getReward();
-        if (avilable() > 0) {
-            rewardPool.stake(avilable());
+        uint256 avl = avilable();
+        if (avl > 0) {
+            rewardPool.stake(avl);
         }
     }
 
@@ -159,7 +247,7 @@ contract FiLDAVault is BoringOwnable, Pausable, ERC20 {
     }
 
     function avilable() internal view returns(uint256) {
-        return underlying.balanceOf(address(this));
+        return lpToken.balanceOf(address(this)).sub(totalLocked);
     }
 
     /**
