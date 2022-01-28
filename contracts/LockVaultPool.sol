@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-import "./RewardPool.sol";
+import "./IRewardPool.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
@@ -20,7 +20,7 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
 
     IERC20 public lpToken;
     uint256 public withdrawPeriod = 72 hours;
-    NoMintRewardPool public rewardPool;
+    IRewardPool public rewardPool;
 
     struct WithDrawEntity {
         uint256 amount;
@@ -66,7 +66,7 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
         _initialExchangeRate = initialExchangeRate_;
 
         if (rewardPool_ != address(0)) {
-            rewardPool = NoMintRewardPool(rewardPool_);
+            rewardPool = IRewardPool(rewardPool_);
             require(rewardPool.rewardToken() == rewardPool.lpToken(), "reward pool rewardToken is not equal to lpToken");
             lpToken = rewardPool.rewardToken();
 
@@ -78,7 +78,7 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
     function setRewardPool(address _pool) external onlyOwner {
         require(_pool != address(0), "reward pool shouldn't be empty");
 
-        rewardPool = NoMintRewardPool(_pool);
+        rewardPool = IRewardPool(_pool);
         require(rewardPool.rewardToken() == rewardPool.lpToken(), "reward pool rewardToken is not equal to lpToken");
         lpToken = rewardPool.rewardToken();
 
