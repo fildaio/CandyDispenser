@@ -180,7 +180,7 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
         emit ContractAllowed(_allowed);
     }
 
-    function deposit(uint256 amount, address to) external whenNotPaused checkContract {
+    function deposit(uint256 amount, address to) public whenNotPaused checkContract {
         reinvest();
         uint256 exchangeRate = exchangeRateStored();
 
@@ -194,7 +194,11 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
         emit Deposited(msg.sender, to, amount);
     }
 
-    function cancelLock(uint256 amount, address to) external whenNotPaused checkContract {
+    function deposit(uint256 amount) external {
+        deposit(amount, msg.sender);
+    }
+
+    function cancelLock(uint256 amount, address to) public whenNotPaused checkContract {
         require(withdrawEntities[msg.sender].amount > 0 && withdrawEntities[msg.sender].time > 0, "not applied!");
         require(withdrawEntities[msg.sender].amount >= amount, "applied amount is not enough!");
 
@@ -213,7 +217,11 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
         emit Deposited(msg.sender, to, amount);
     }
 
-    function vaultWithdraw(uint256 amount, address to) external checkContract {
+    function cancelLock(uint256 amount) external {
+        cancelLock(amount, msg.sender);
+    }
+
+    function vaultWithdraw(uint256 amount, address to) public checkContract {
         reinvest();
 
         uint exchangeRate = exchangeRateStored();
@@ -235,7 +243,11 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
         }
     }
 
-    function vaultWithdrawUnderlying(uint256 amount, address to) external checkContract {
+    function vaultWithdraw(uint256 amount) external {
+        vaultWithdraw(amount, msg.sender);
+    }
+
+    function vaultWithdrawUnderlying(uint256 amount, address to) public checkContract {
         reinvest();
 
         uint256 tokenAmount = amount.mul(EXP_SCALE).div(exchangeRateStored());
@@ -254,6 +266,10 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
             inExe = false;
             exeAccount = address(0);
         }
+    }
+
+    function vaultWithdrawUnderlying(uint256 amount) external {
+        vaultWithdrawUnderlying(amount, msg.sender);
     }
 
     function reinvest() public checkContract {
