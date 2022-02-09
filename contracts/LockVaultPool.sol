@@ -44,7 +44,7 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
     event FeeChanged(uint256 indexed _fee);
     event ContractAllowed(bool _allowed);
     event Deposited(address from, address to, uint256 amount);
-    event Withdrawn(address from, address to, uint256 amount);
+    event Withdrawn(address from, address to, uint256 amount, uint256 fee);
 
     modifier onlyRewardPool() {
         require(msg.sender == address(rewardPool), "Not reward pool");
@@ -128,10 +128,12 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
         totalLocked = totalLocked.sub(amount);
         if (block.timestamp >= withdrawTime(account)) {
             lpToken.safeTransfer(account, amount);
+            emit Withdrawn(account, account, amount, 0);
         } else {
             uint256 fee = amount.mul(feeMolecular).div(FEE_DENOMINATOR);
             ERC20Burnable(address(lpToken)).burn(fee);
             lpToken.safeTransfer(account, amount.sub(fee));
+            emit Withdrawn(account, account, amount.sub(fee), fee);
         }
     }
 
@@ -231,7 +233,7 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
         if (withdrawPeriod == 0) {
             rewardPool.withdraw(underlyingAmount);
             lpToken.safeTransfer(to, underlyingAmount);
-            emit Withdrawn(msg.sender, to, underlyingAmount);
+            emit Withdrawn(msg.sender, to, underlyingAmount, 0);
         } else {
             inExe = true;
             exeAccount = to;
@@ -256,7 +258,7 @@ contract LockVaultPool is Ownable, Pausable, ERC20 {
         if (withdrawPeriod == 0) {
             rewardPool.withdraw(amount);
             lpToken.safeTransfer(to, amount);
-            emit Withdrawn(msg.sender, to, amount);
+            emit Withdrawn(msg.sender, to, amount, 0);
         } else {
             inExe = true;
             exeAccount = to;
